@@ -1,0 +1,7 @@
+opencv-python
+numpy
+PyQt6
+fastapi
+uvicorn
+python-multipart
+rembg[cpu]
