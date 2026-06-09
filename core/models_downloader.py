@@ -15,6 +15,18 @@ MODELS = {
     "style_candy": {
         "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/candy.t7",
         "file": "candy.t7"
+    },
+    "style_starry_night": {
+        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/starry_night.t7",
+        "file": "starry_night.t7"
+    },
+    "style_anime": {
+        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/la_muse.t7",
+        "file": "la_muse.t7"
+    },
+    "style_3d": {
+        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/udnie.t7",
+        "file": "udnie.t7"
     }
 }
 

@@ -115,7 +115,10 @@ def apply_effect(
         "watercolor": apply_watercolor,
         "cartoon": apply_cartoon,
         "style_mosaic": lambda img, **k: apply_style_transfer(img, "style_mosaic"),
-        "style_candy": lambda img, **k: apply_style_transfer(img, "style_candy")
+        "style_candy": lambda img, **k: apply_style_transfer(img, "style_candy"),
+        "style_starry_night": lambda img, **k: apply_style_transfer(img, "style_starry_night"),
+        "style_anime": lambda img, **k: apply_style_transfer(img, "style_anime"),
+        "style_3d": lambda img, **k: apply_style_transfer(img, "style_3d")
     }
     
     if effect != "none":
