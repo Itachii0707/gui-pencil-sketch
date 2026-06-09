@@ -1,3 +1,11 @@
+---
+title: Pencil Sketch Api
+emoji: 🎨
+colorFrom: indigo
+colorTo: fuchsia
+sdk: docker
+pinned: false
+---
 # Pencil Sketch App (Desktop & Web)
 
 This is a production-grade application for applying various sketch and cartoon effects to images. It features a shared image processing core and two separate interfaces: a PyQt6 Desktop application and a Next.js + FastAPI Web application.
