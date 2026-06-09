@@ -52,7 +52,7 @@ export default function Home() {
     formData.append("do_super_res", superRes ? "true" : "false");
 
     try {
-      const res = await fetch("https://gui-pencil-sketch.onrender.com/api/process", {
+      const res = await fetch("https://ayush7986-pencil-sketch-api.hf.space/api/process", {
         method: "POST",
         body: formData,
       });
@@ -88,7 +88,7 @@ export default function Home() {
       setCamActive(true);
       
       // Connect WS
-      wsRef.current = new WebSocket("wss://gui-pencil-sketch.onrender.com/api/stream");
+      wsRef.current = new WebSocket("wss://ayush7986-pencil-sketch-api.hf.space/api/stream");
       wsRef.current.onopen = () => {
         wsRef.current?.send(JSON.stringify({ effect, blur_size: blurSize }));
         sendFrame(); // Start sending loop
