@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { UploadCloud, ImageIcon, Download, Loader2, Sparkles, RefreshCcw, Camera, Settings2, X } from "lucide-react";
+import { UploadCloud, ImageIcon, Download, Loader2, Sparkles, RefreshCcw, Camera, Settings2, X, Image as GridIcon, Share2, Archive } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"image" | "camera">("image");
+  const [activeTab, setActiveTab] = useState<"image" | "camera" | "gallery">("image");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Image Tab State
@@ -15,6 +17,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Gallery State
+  const [galleryImages, setGalleryImages] = useState<{url: string, id: string, effect: string}[]>([]);
 
   // Settings State
   const [effect, setEffect] = useState<string>("pencil");
@@ -37,7 +42,6 @@ export default function Home() {
       setPreviewUrl(URL.createObjectURL(selectedFile));
       setProcessedUrl(null);
       setError(null);
-      // On mobile, automatically open settings when file is chosen
       if (window.innerWidth < 1024) setIsMobileMenuOpen(true);
     }
   };
@@ -46,7 +50,7 @@ export default function Home() {
     if (!file) return;
     setLoading(true);
     setError(null);
-    setIsMobileMenuOpen(false); // Close mobile menu while generating
+    setIsMobileMenuOpen(false);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -64,7 +68,11 @@ export default function Home() {
       if (!res.ok) throw new Error(await res.text());
 
       const blob = await res.blob();
-      setProcessedUrl(URL.createObjectURL(blob));
+      const newUrl = URL.createObjectURL(blob);
+      setProcessedUrl(newUrl);
+      
+      // Add to gallery
+      setGalleryImages(prev => [{url: newUrl, id: Date.now().toString(), effect}, ...prev]);
     } catch (err: any) {
       setError(err.message || "Failed to process image");
     } finally {
@@ -78,6 +86,43 @@ export default function Home() {
     setProcessedUrl(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // --- Gallery Logic ---
+  const downloadAll = async () => {
+    if (galleryImages.length === 0) return;
+    const zip = new JSZip();
+    
+    // Fetch all blob URLs and add to zip
+    for (let i = 0; i < galleryImages.length; i++) {
+      const img = galleryImages[i];
+      const response = await fetch(img.url);
+      const blob = await response.blob();
+      zip.file(`art_${img.effect}_${img.id}.jpg`, blob);
+    }
+    
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, "my_art_gallery.zip");
+  };
+
+  const shareImage = async (url: string, effectName: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const file = new File([blob], `art_${effectName}.jpg`, { type: 'image/jpeg' });
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: 'My AI Art',
+          text: `Check out this ${effectName} art I generated!`,
+          files: [file]
+        });
+      } else {
+        alert("Web Share API is not supported on this browser.");
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+    }
   };
 
   // --- Webcam Logic ---
@@ -153,8 +198,11 @@ export default function Home() {
             { id: 'color_pencil', label: 'Color Sketch' },
             { id: 'watercolor', label: 'Watercolor' },
             { id: 'cartoon', label: 'Cartoon' },
-            { id: 'style_mosaic', label: 'Mosaic (AI)' },
-            { id: 'style_candy', label: 'Candy (AI)' }
+            { id: 'style_anime', label: 'Anime Style' },
+            { id: 'style_3d', label: '3D Abstract' },
+            { id: 'style_starry_night', label: 'Starry Night' },
+            { id: 'style_mosaic', label: 'Mosaic' },
+            { id: 'style_candy', label: 'Candy' }
           ].map((eff) => (
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -236,7 +284,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen selection:bg-indigo-500/30 pb-24 lg:pb-0 relative">
-      {/* Background gradients */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/20 blur-[150px]" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-fuchsia-600/20 blur-[150px]" />
@@ -254,14 +301,24 @@ export default function Home() {
         </header>
 
         {/* Tab Navigation */}
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex justify-center gap-3 p-1.5 bg-white/5 rounded-3xl w-fit mx-auto border border-white/10 backdrop-blur-md">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-wrap justify-center gap-3 p-1.5 bg-white/5 rounded-3xl w-fit mx-auto border border-white/10 backdrop-blur-md">
           <button 
             onClick={() => { setActiveTab("image"); stopCamera(); }}
             className={`px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all duration-300 relative`}
           >
             {activeTab === "image" && <motion.div layoutId="activeTab" className="absolute inset-0 bg-white rounded-2xl" />}
             <span className={`relative z-10 flex items-center gap-2 ${activeTab === "image" ? "text-slate-900" : "text-slate-400 hover:text-white"}`}>
-              <ImageIcon className="w-5 h-5" /> Image
+              <ImageIcon className="w-5 h-5 hidden sm:block" /> Image
+            </span>
+          </button>
+          <button 
+            onClick={() => { setActiveTab("gallery"); stopCamera(); }}
+            className={`px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all duration-300 relative`}
+          >
+            {activeTab === "gallery" && <motion.div layoutId="activeTab" className="absolute inset-0 bg-white rounded-2xl" />}
+            <span className={`relative z-10 flex items-center gap-2 ${activeTab === "gallery" ? "text-slate-900" : "text-slate-400 hover:text-white"}`}>
+              <GridIcon className="w-5 h-5 hidden sm:block" /> Gallery
+              {galleryImages.length > 0 && <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${activeTab === 'gallery' ? 'bg-indigo-100 text-indigo-600' : 'bg-indigo-500 text-white'}`}>{galleryImages.length}</span>}
             </span>
           </button>
           <button 
@@ -270,7 +327,7 @@ export default function Home() {
           >
             {activeTab === "camera" && <motion.div layoutId="activeTab" className="absolute inset-0 bg-white rounded-2xl" />}
             <span className={`relative z-10 flex items-center gap-2 ${activeTab === "camera" ? "text-slate-900" : "text-slate-400 hover:text-white"}`}>
-              <Camera className="w-5 h-5" /> Live Camera
+              <Camera className="w-5 h-5 hidden sm:block" /> Camera
             </span>
           </button>
         </motion.div>
@@ -278,14 +335,16 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-4">
           
           {/* Desktop Controls Sidebar */}
-          <aside className="hidden lg:flex lg:col-span-4 p-8 rounded-[2rem] bg-white/[0.02] border border-white/10 backdrop-blur-2xl shadow-2xl flex-col gap-6 sticky top-8">
-            <ControlsPanel />
-          </aside>
+          {activeTab !== "gallery" && (
+            <aside className="hidden lg:flex lg:col-span-4 p-8 rounded-[2rem] bg-white/[0.02] border border-white/10 backdrop-blur-2xl shadow-2xl flex-col gap-6 sticky top-8">
+              <ControlsPanel />
+            </aside>
+          )}
 
           {/* Main Display Area */}
-          <section className="lg:col-span-8 flex flex-col gap-6">
+          <section className={`flex flex-col gap-6 ${activeTab === 'gallery' ? 'lg:col-span-12' : 'lg:col-span-8'}`}>
             <AnimatePresence mode="wait">
-              {activeTab === "image" ? (
+              {activeTab === "image" && (
                 <motion.div key="image" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col gap-6">
                   {!previewUrl ? (
                     <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} onClick={() => fileInputRef.current?.click()} className="h-[400px] md:h-[500px] w-full rounded-[2.5rem] border-2 border-dashed border-white/20 bg-white/[0.02] hover:bg-white/[0.05] hover:border-indigo-500/50 flex flex-col items-center justify-center gap-6 cursor-pointer group transition-all backdrop-blur-sm">
@@ -323,15 +382,65 @@ export default function Home() {
                       <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 p-4 rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-md">
                         <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={reset} className="px-6 py-3 rounded-2xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2 transition-colors"><RefreshCcw className="w-4 h-4" /> Start Over</motion.button>
                         {processedUrl && (
-                          <motion.a whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} href={processedUrl} download={`art_${effect}.jpg`} className="px-6 py-3 rounded-2xl text-sm font-bold bg-white text-black shadow-lg hover:shadow-xl flex items-center gap-2 transition-all"><Download className="w-4 h-4" /> Download Masterpiece</motion.a>
+                          <>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => shareImage(processedUrl, effect)} className="px-6 py-3 rounded-2xl text-sm font-bold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/40 flex items-center gap-2"><Share2 className="w-4 h-4" /> Share</motion.button>
+                            <motion.a whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} href={processedUrl} download={`art_${effect}.jpg`} className="px-6 py-3 rounded-2xl text-sm font-bold bg-white text-black shadow-lg hover:shadow-xl flex items-center gap-2 transition-all"><Download className="w-4 h-4" /> Download</motion.a>
+                          </>
                         )}
-                        {/* Mobile trigger for settings if image is uploaded */}
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden px-6 py-3 rounded-2xl text-sm font-bold bg-indigo-500 text-white shadow-lg flex items-center gap-2"><Settings2 className="w-4 h-4" /> Adjust Settings</button>
+                        <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden px-6 py-3 rounded-2xl text-sm font-bold bg-indigo-500 text-white shadow-lg flex items-center gap-2"><Settings2 className="w-4 h-4" /> Settings</button>
                       </div>
                     </div>
                   )}
                 </motion.div>
-              ) : (
+              )}
+              
+              {activeTab === "gallery" && (
+                <motion.div key="gallery" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col gap-6">
+                  <div className="flex flex-wrap justify-between items-end gap-4 mb-4">
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Your Art Gallery</h2>
+                      <p className="text-slate-400 text-sm">All creations from your current session.</p>
+                    </div>
+                    {galleryImages.length > 0 && (
+                      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={downloadAll} className="px-6 py-3 rounded-2xl text-sm font-bold bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg flex items-center gap-2"><Archive className="w-4 h-4" /> Download All (.zip)</motion.button>
+                    )}
+                  </div>
+
+                  {galleryImages.length === 0 ? (
+                    <div className="h-[400px] w-full rounded-[2.5rem] border border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-6 backdrop-blur-sm">
+                      <GridIcon className="w-16 h-16 text-slate-600" />
+                      <h3 className="text-xl font-semibold text-slate-300">Your gallery is empty</h3>
+                      <p className="text-slate-500">Go to the Image tab and generate some art first!</p>
+                      <button onClick={() => setActiveTab("image")} className="mt-4 px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all">Go Create</button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                      <AnimatePresence>
+                        {galleryImages.map((img) => (
+                          <motion.div 
+                            key={img.id}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            layout
+                            className="group relative aspect-square rounded-[2rem] overflow-hidden bg-black/40 border border-white/10 shadow-lg"
+                          >
+                            <img src={img.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Generated Art" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                              <span className="text-white font-medium mb-4 capitalize">{img.effect.replace("style_", "").replace("_", " ")}</span>
+                              <div className="flex gap-2">
+                                <a href={img.url} download={`art_${img.effect}_${img.id}.jpg`} className="p-3 rounded-xl bg-white/20 hover:bg-white/40 text-white backdrop-blur-md transition-all"><Download className="w-4 h-4" /></a>
+                                <button onClick={() => shareImage(img.url, img.effect)} className="p-3 rounded-xl bg-indigo-500/80 hover:bg-indigo-400 text-white backdrop-blur-md transition-all"><Share2 className="w-4 h-4" /></button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {activeTab === "camera" && (
                 <motion.div key="camera" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col gap-6">
                   {!camActive ? (
                     <div className="h-[400px] md:h-[500px] w-full rounded-[2.5rem] border border-white/10 bg-black/40 flex flex-col items-center justify-center gap-8 backdrop-blur-sm shadow-xl">
