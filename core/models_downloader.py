@@ -9,11 +9,11 @@ MODELS = {
         "file": "ESPCN_x4.pb"
     },
     "style_mosaic": {
-        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/mosaic.t7",
+        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/instance_norm/mosaic.t7",
         "file": "mosaic.t7"
     },
     "style_candy": {
-        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/candy.t7",
+        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/instance_norm/candy.t7",
         "file": "candy.t7"
     },
     "style_starry_night": {
