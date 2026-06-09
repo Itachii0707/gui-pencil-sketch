@@ -110,6 +110,7 @@ async def websocket_endpoint(websocket: WebSocket):
         print(f"WebSocket error: {e}")
         await websocket.close()
 
+@app.get("/")
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok"}
