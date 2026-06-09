@@ -293,10 +293,10 @@ export default function Home() {
         
         <header className="text-center space-y-4 pt-4">
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="inline-block">
-            <span className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-indigo-300 mb-4 inline-block">AI Vision System</span>
+            <span className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-indigo-300 mb-4 inline-block">Creative Studio</span>
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-4xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-fuchsia-400 to-rose-400">
-            Advanced Artistic Engine
+            Artify AI
           </motion.h1>
         </header>
 
