@@ -25,7 +25,7 @@ MODELS = {
         "file": "la_muse.t7"
     },
     "style_3d": {
-        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/udnie.t7",
+        "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/instance_norm/udnie.t7",
         "file": "udnie.t7"
     }
 }
