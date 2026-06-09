@@ -2,7 +2,7 @@
 title: Pencil Sketch Api
 emoji: 🎨
 colorFrom: indigo
-colorTo: fuchsia
+colorTo: purple
 sdk: docker
 pinned: false
 ---
