@@ -104,7 +104,8 @@ class MainWindow(QMainWindow):
         self.effect_combo = QComboBox()
         self.effect_combo.addItems([
             "pencil", "color_pencil", "watercolor", "cartoon", 
-            "style_mosaic", "style_candy"
+            "style_mosaic", "style_candy", "style_starry_night", 
+            "style_anime", "style_3d"
         ])
         self.effect_combo.currentTextChanged.connect(self.process_image)
         effect_layout.addWidget(QLabel("Effect Style:"))

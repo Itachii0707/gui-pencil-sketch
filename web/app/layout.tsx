@@ -8,7 +8,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Advanced Artistic Engine",
+  title: "Artify AI - Creative Studio",
   description: "Transform your photos into stunning artworks using AI.",
 };
 
