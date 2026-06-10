@@ -1,12 +1,13 @@
 ---
-title: Pencil Sketch Api
+title: Artify AI API
 emoji: 🎨
 colorFrom: indigo
 colorTo: purple
 sdk: docker
+app_file: Dockerfile
 pinned: false
 ---
-# Pencil Sketch App (Desktop & Web)
+# Artify AI - Creative Studio
 
 This is a production-grade application for applying various sketch and cartoon effects to images. It features a shared image processing core and two separate interfaces: a PyQt6 Desktop application and a Next.js + FastAPI Web application.
 

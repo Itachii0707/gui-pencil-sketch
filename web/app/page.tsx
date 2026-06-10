@@ -6,6 +6,27 @@ import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
+function BlurSlider({ blurSize, setBlurSize }: { blurSize: number, setBlurSize: (v: number) => void }) {
+  const [localVal, setLocalVal] = useState(blurSize);
+  useEffect(() => { setLocalVal(blurSize); }, [blurSize]);
+  return (
+    <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+      <div className="flex justify-between text-sm">
+        <span className="text-slate-300">Blur Amount (Detail)</span>
+        <span className="text-indigo-400 font-mono bg-indigo-500/10 px-2 py-0.5 rounded">{localVal}</span>
+      </div>
+      <input 
+        type="range" min="3" max="51" step="2"
+        value={localVal}
+        onChange={(e) => setLocalVal(parseInt(e.target.value))}
+        onPointerUp={() => setBlurSize(localVal)}
+        onTouchEnd={() => setBlurSize(localVal)}
+        className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+      />
+    </div>
+  );
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"image" | "camera" | "gallery">("image");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -26,6 +47,13 @@ export default function Home() {
   const [blurSize, setBlurSize] = useState<number>(21);
   const [bgRemove, setBgRemove] = useState<boolean>(false);
   const [superRes, setSuperRes] = useState<boolean>(false);
+
+  // Update live webcam stream config when effect or blurSize changes
+  useEffect(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ effect, blur_size: blurSize }));
+    }
+  }, [effect, blurSize]);
 
   // Camera Tab State
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -50,6 +78,7 @@ export default function Home() {
     if (!file) return;
     setLoading(true);
     setError(null);
+    setProcessedUrl(null);
     setIsMobileMenuOpen(false);
 
     const formData = new FormData();
@@ -143,7 +172,11 @@ export default function Home() {
       
       wsRef.current.onmessage = async (event) => {
         const blob = new Blob([event.data], { type: "image/jpeg" });
-        setLiveResult(URL.createObjectURL(blob));
+        const newUrl = URL.createObjectURL(blob);
+        setLiveResult(prev => {
+          if (prev) URL.revokeObjectURL(prev);
+          return newUrl;
+        });
       };
     } catch (err) {
       setError("Failed to access camera.");
@@ -160,7 +193,10 @@ export default function Home() {
       wsRef.current = null;
     }
     setCamActive(false);
-    setLiveResult(null);
+    setLiveResult(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
   };
 
   const sendFrame = () => {
@@ -227,18 +263,7 @@ export default function Home() {
       <div className="space-y-6">
         <h2 className="text-xl font-semibold text-white">Refinement</h2>
         
-        <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-300">Blur Amount (Detail)</span>
-            <span className="text-indigo-400 font-mono bg-indigo-500/10 px-2 py-0.5 rounded">{blurSize}</span>
-          </div>
-          <input 
-            type="range" min="3" max="51" step="2"
-            value={blurSize}
-            onChange={(e) => setBlurSize(parseInt(e.target.value))}
-            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-          />
-        </div>
+        <BlurSlider blurSize={blurSize} setBlurSize={setBlurSize} />
 
         {activeTab === "image" && (
           <div className="space-y-3 pt-2">

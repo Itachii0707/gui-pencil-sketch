@@ -5,12 +5,37 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QFileDialog, QComboBox, QMessageBox, 
     QSlider, QCheckBox, QTabWidget, QSpinBox
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent
 import cv2
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import apply_effect
+
+class ProcessThread(QThread):
+    finished = pyqtSignal(object)
+    failed = pyqtSignal(str)
+    
+    def __init__(self, img, effect, blur_size, do_bg_remove, do_super_res):
+        super().__init__()
+        self.img = img
+        self.effect = effect
+        self.blur_size = blur_size
+        self.do_bg_remove = do_bg_remove
+        self.do_super_res = do_super_res
+        
+    def run(self):
+        try:
+            processed = apply_effect(
+                self.img, 
+                effect=self.effect,
+                blur_size=self.blur_size,
+                do_bg_remove=self.do_bg_remove,
+                do_super_res=self.do_super_res
+            )
+            self.finished.emit(processed)
+        except Exception as e:
+            self.failed.emit(str(e))
 
 class DropLabel(QLabel):
     def __init__(self, title):
@@ -58,10 +83,16 @@ class DropLabel(QLabel):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Pencil Sketch App - Advanced")
+        self.setWindowTitle("Artify AI - Creative Studio")
         self.setGeometry(100, 100, 1200, 700)
         self.processed_img_cv = None
         self.cap = None
+        self.process_thread = None
+        
+        # Debounce timer for the blur slider
+        self.slider_timer = QTimer()
+        self.slider_timer.setSingleShot(True)
+        self.slider_timer.timeout.connect(self.process_image)
         
         self.init_ui()
 
@@ -117,7 +148,13 @@ class MainWindow(QMainWindow):
         self.slider_blur.setRange(3, 51)
         self.slider_blur.setSingleStep(2)
         self.slider_blur.setValue(21)
-        self.slider_blur.valueChanged.connect(self.process_image)
+        
+        # Add a label to display the current blur value
+        self.lbl_blur_val = QLabel("21")
+        self.lbl_blur_val.setFixedWidth(20)
+        slider_layout.addWidget(self.lbl_blur_val)
+        
+        self.slider_blur.valueChanged.connect(self.on_slider_changed)
         slider_layout.addWidget(self.slider_blur)
         effect_layout.addLayout(slider_layout)
         
@@ -218,32 +255,50 @@ class MainWindow(QMainWindow):
             self.lbl_original.set_image(file_name)
             self.process_image()
 
+    def on_slider_changed(self, value):
+        self.lbl_blur_val.setText(str(value))
+        self.slider_timer.start(250)
+
     def process_image(self):
         if not hasattr(self, 'lbl_original') or not self.lbl_original.image_path:
             return
+
+        if self.process_thread and self.process_thread.isRunning():
+            self.process_thread.terminate()
+            self.process_thread.wait()
 
         try:
             img = cv2.imread(self.lbl_original.image_path)
             if img is None:
                 raise ValueError("Failed to read image.")
 
-            # Make blur size odd
             b_size = self.slider_blur.value()
             if b_size % 2 == 0: b_size += 1
 
-            self.processed_img_cv = apply_effect(
-                img, 
-                effect=self.effect_combo.currentText(),
-                blur_size=b_size,
-                do_bg_remove=self.chk_bg_remove.isChecked(),
-                do_super_res=self.chk_super_res.isChecked()
-            )
-            
-            self.lbl_processed.set_cv_image(self.processed_img_cv)
-            self.btn_save.setEnabled(True)
+            effect = self.effect_combo.currentText()
+            bg_remove = self.chk_bg_remove.isChecked()
+            super_res = self.chk_super_res.isChecked()
+
+            # Show visual status update
+            self.lbl_processed.setText("Applying effect...\nPlease wait.")
+            self.btn_save.setEnabled(False)
+
+            self.process_thread = ProcessThread(img, effect, b_size, bg_remove, super_res)
+            self.process_thread.finished.connect(self.on_processing_finished)
+            self.process_thread.failed.connect(self.on_processing_failed)
+            self.process_thread.start()
+
         except Exception as e:
-            # We don't want popups on every slider move if an error occurs (e.g. downloading model)
-            print(f"Processing Error: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to start processing: {e}")
+
+    def on_processing_finished(self, processed_img):
+        self.processed_img_cv = processed_img
+        self.lbl_processed.set_cv_image(self.processed_img_cv)
+        self.btn_save.setEnabled(True)
+
+    def on_processing_failed(self, err_msg):
+        self.lbl_processed.setText("Processing failed")
+        QMessageBox.warning(self, "Processing Error", f"An error occurred:\n{err_msg}")
 
     def save_image(self):
         if self.processed_img_cv is None: return

@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import apply_effect, bytes_to_cv2, cv2_to_bytes
 
-app = FastAPI(title="Pencil Sketch Advanced API")
+app = FastAPI(title="Artify AI - Advanced API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,26 +89,41 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try:
         while True:
-            # Receive frame as bytes
-            data = await websocket.receive_bytes()
-            
-            # Decode frame
-            np_arr = np.frombuffer(data, np.uint8)
-            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-            
-            if frame is not None:
-                # Process frame
-                processed = apply_effect(frame, effect=effect, blur_size=blur_size)
+            message = await websocket.receive()
+            if "type" in message and message["type"] == "websocket.disconnect":
+                break
                 
-                # Encode and send back
-                _, encoded = cv2.imencode('.jpg', processed, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
-                await websocket.send_bytes(encoded.tobytes())
+            if "text" in message:
+                import json
+                try:
+                    config = json.loads(message["text"])
+                    effect = config.get("effect", effect)
+                    blur_size = config.get("blur_size", blur_size)
+                except Exception as e:
+                    print(f"WebSocket config update error: {e}")
+            elif "bytes" in message:
+                data = message["bytes"]
                 
+                # Decode frame
+                np_arr = np.frombuffer(data, np.uint8)
+                frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                
+                if frame is not None:
+                    # Process frame
+                    processed = apply_effect(frame, effect=effect, blur_size=blur_size)
+                    
+                    # Encode and send back
+                    _, encoded = cv2.imencode('.jpg', processed, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+                    await websocket.send_bytes(encoded.tobytes())
+                    
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
         print(f"WebSocket error: {e}")
-        await websocket.close()
+        try:
+            await websocket.close()
+        except:
+            pass
 
 @app.get("/")
 @app.get("/api/health")
