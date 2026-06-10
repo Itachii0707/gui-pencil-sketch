@@ -82,6 +82,25 @@ def apply_cartoon(image_np: np.ndarray, **kwargs) -> np.ndarray:
     cartoon = cv2.bitwise_and(color, color, mask=edges)
     return cartoon
 
+def apply_anime(image_np: np.ndarray, **kwargs) -> np.ndarray:
+    # Smooth the image heavily to remove texture but keep edges
+    color = cv2.bilateralFilter(image_np, 9, 250, 250)
+    
+    # Increase color saturation
+    hsv = cv2.cvtColor(color, cv2.COLOR_BGR2HSV).astype(np.float32)
+    hsv[:,:,1] = np.clip(hsv[:,:,1] * 1.5, 0, 255) # boost saturation
+    hsv[:,:,2] = np.clip(hsv[:,:,2] * 1.1, 0, 255) # slightly boost brightness
+    color = cv2.cvtColor(hsv.astype(np.uint8), cv2.HSV2BGR)
+    
+    # Detect edges to draw anime-style outlines
+    gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+    gray = cv2.medianBlur(gray, 5)
+    edges = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 7)
+    
+    # Combine edges with the smoothed colors
+    anime = cv2.bitwise_and(color, color, mask=edges)
+    return anime
+
 def apply_effect(
     image_np: np.ndarray, 
     effect: str, 
@@ -117,7 +136,7 @@ def apply_effect(
         "style_mosaic": lambda img, **k: apply_style_transfer(img, "style_mosaic"),
         "style_candy": lambda img, **k: apply_style_transfer(img, "style_candy"),
         "style_starry_night": lambda img, **k: apply_style_transfer(img, "style_starry_night"),
-        "style_anime": lambda img, **k: apply_style_transfer(img, "style_anime"),
+        "style_anime": apply_anime,
         "style_3d": lambda img, **k: apply_style_transfer(img, "style_3d")
     }
     
